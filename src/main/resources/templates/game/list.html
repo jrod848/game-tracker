@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Progress Tracker</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background-color: #f8f9fa; /* Light gray background */
+            padding-top: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            position: relative; /* Position relative for absolute positioning inside */
+            margin-bottom: 20px;
+            padding-top: 20px; /* Space for the button */
+            padding-bottom: 20px; /* Space between header content and game list */
+            background: #fff; /* White background for header */
+            border-radius: 8px; /* Rounded corners for the header */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for header */
+            display: flex;
+        }
+
+        .header-img {
+            width: 150px; /* Adjust the size as needed */
+            height: auto; /* Maintains aspect ratio */
+            margin-left: 15px;
+            margin-right: 15px;
+        }
+
+        .header h1 {
+            margin-bottom: 0;
+            text-align: center; /* Center the title */
+        }
+
+        .btn-primary {
+            position: absolute; /* Absolute positioning within the header */
+            top: 20px; /* Adjust as needed to be below the title */
+            right: 20px; /* Align to the right with some margin */
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .game-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* Space between tiles */
+        }
+
+        .game-item {
+            background-color: #fff; /* White background for each game item */
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.3s, transform 0.3s;
+        }
+
+        .game-item:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .game-item-header {
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .game-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            transition: color 0.3s, transform 0.3s;
+            user-select: none;
+            text-decoration: none; /* Remove underline */
+        }
+
+        .game-name:hover {
+            color: #007bff;
+            transform: scale(1.05);
+        }
+
+        .progress-bar-container {
+            flex: 1;
+            position: relative;
+            height: 30px;
+            border-radius: 15px;
+            background: #f3f4f6;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .progress-bar-custom {
+            height: 100%;
+            border-radius: 15px;
+            background: linear-gradient(45deg, #4caf50, #81c784);
+            color: #fff;
+            text-align: right;
+            line-height: 30px;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0%; /* Start from 0% width */
+            transition: width 0.4s ease-in-out;
+            display: flex;
+            align-items: end;
+            justify-content: right;
+            padding-right: 10px;
+        }
+
+        .progress-bar-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .expandable-content {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .expandable-content.active {
+            display: block;
+        }
+
+        .action-icons {
+            font-size: 1.2rem;
+            margin-top: 10px;
+        }
+
+        .action-icons a {
+            color: #333;
+            margin-right: 10px;
+            transition: color 0.3s;
+        }
+
+        .action-icons a:hover {
+            color: #007bff;
+        }
+
+        .notes-section {
+            margin-top: 10px;
+        }
+
+        .notes-section textarea {
+            width: 100%;
+            height: 100px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <img class="header-img" src="/assets/images/eureka_logo.png" alt="runescape">
+        <h1 class="my-4">Game Progress Tracker</h1>
+        <a class="btn btn-primary" href="/games/add">+</a>
+    </div>
+    <div class="game-list" id="games-list">
+        <div class="game-item" th:each="game : ${games}">
+            <img class=2"game-item-img" th:src='${game.headerImageUrl}' th:alt="${game.name}">
+            <div class="game-item-header">
+                <span class="game-name" onclick="toggleExpand(this.parentElement)">
+                    <a th:text="${game.name}"></a>
+                </span>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-custom"
+                         th:style="'width: ' + ${game.progress} + '%;'"
+                         aria-label="Progress"
+                         role="progressbar"
+                         th:attr="aria-valuenow=${game.progress}, aria-valuemin='0', aria-valuemax='100'">
+                        <span th:text="${game.progress} + '%'"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="expandable-content">
+                <div class="action-icons">
+                    <a th:href="@{/games/edit/{id}(id=${game.id})}" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <a th:href="@{/games/delete/{id}(id=${game.id})}" title="Delete">
+                        <i class="fas fa-trash-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS and dependencies -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    function toggleExpand(element) {
+        const content = element.nextElementSibling;
+        content.classList.toggle('active');
+    }
+</script>
+</body>
+</html>

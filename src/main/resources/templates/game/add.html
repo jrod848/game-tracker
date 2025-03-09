@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Game</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-control {
+            border-radius: 5px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            border: none;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .back-link {
+            margin-top: 20px;
+            display: inline-block;
+        }
+
+        .suggestions-list {
+            border: 1px solid #ccc;
+            background-color: white;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            z-index: 1000;
+            width: calc(100% - 20px); /* Adjust width */
+        }
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .suggestion-item:hover {
+            background-color: #f0f0f0; /* Highlight on hover */
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Add New Game</h1>
+    <form th:action="@{/games/add}" th:object="${game}" method="post">
+        <div class="form-group">
+            <label for="steamCheck">Is this game on Steam?</label>
+            <input type="checkbox" id="steamCheck" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="name">Game Name:</label>
+            <input type="text" id="name" th:field="*{name}" class="form-control" required autocomplete="off">
+            <div id="suggestions" class="suggestions-list" style="display:none;"></div> <!-- Suggestions container -->
+        </div>
+        <div class="form-group">
+            <label for="progress">Progress (0-100%):</label>
+            <input type="number" id="progress" th:field="*{progress}" min="0" max="100" class="form-control" required>
+        </div>
+        <div class="form-group" id="appidGroup" style="display:none;">
+            <label for="appid">APP ID (Optional)</label>
+            <input type="text" id="appid" th:field="*{appid}" class="form-control" readonly>
+        </div>
+        <div class="form-group" id="iconGroup" style="display:none;">
+            <label for="iconImage">Game Icon:</label>
+            <img id="iconImage" src="" alt="Game Icon" style="max-width: 600px; max-height: 300px; display:none;">
+        </div>
+        <div class="form-group" style="display:none;">
+            <label for="headerImage">Game Header Image:</label>
+            <input type="text" id="headerImage" th:field="*{headerImageUrl}" class="form-control" readonly>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Game</button>
+    </form>
+    <a href="/games" class="btn btn-secondary back-link">Back to List</a>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const steamCheck = document.getElementById('steamCheck');
+        const appidGroup = document.getElementById('appidGroup');
+        const suggestionsContainer = document.getElementById('suggestions');
+        const iconGroup = document.getElementById('iconGroup');
+        const gameInput = document.getElementById('name');
+        const iconImage = document.getElementById('iconImage'); // Image element to display the icon
+        const headerImage = document.getElementById('headerImage');
+        const appid = document.getElementById('appid');
+
+        steamCheck.addEventListener('change', function() {
+            // if (this.checked) {
+            //     appid.required = true; // Make appid required
+            //     appid.value = ''; // Clear previous value
+            // } else {
+            //     appid.required = false; // Remove requirement
+            // }
+            appidGroup.style.display = this.checked ? 'block' : 'none';
+            iconGroup.style.display = this.checked ? 'block' : 'none';
+        });
+
+        const gameListUrl = '/games/steamApps';
+        let gameList = [];
+
+        fetch(gameListUrl)
+            .then(response => response.json())
+            .then(data => {
+                gameList = data.applist.apps;
+            })
+            .catch(error => console.error('Error fetching game list:', error));
+
+        gameInput.addEventListener('input', debounce(function() {
+            const input = this.value.toLowerCase();
+            suggestionsContainer.innerHTML = '';
+            if (steamCheck.checked && input) {
+                const filteredGames = gameList.filter(game => game.name.toLowerCase().includes(input));
+                if (filteredGames.length > 0) {
+                    suggestionsContainer.style.display = 'block';
+                    filteredGames.forEach(game => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.textContent = game.name;
+                        div.addEventListener('click', function() {
+                            gameInput.value = game.name;
+                            appid.value = game.appid;
+                            fetchGameIcon(game.appid);
+                            suggestionsContainer.innerHTML = '';
+                            suggestionsContainer.style.display = 'none';
+                        });
+                        suggestionsContainer.appendChild(div);
+                    });
+                } else {
+                    suggestionsContainer.style.display = 'none';
+                }
+            } else {
+                suggestionsContainer.style.display = 'none';
+            }
+        }, 300));
+
+        function fetchGameIcon(appid) {
+            const iconUrlApi = `/games/steamAppsIcon/${appid}`;
+            fetch(iconUrlApi)
+                .then(response => response.json())
+                .then(data => {
+                    if (data[appid] && data[appid].success) {
+                        const iconUrl = data[appid].data && data[appid].data.header_image;
+                        if (iconUrl) {
+                            iconImage.src = iconUrl;
+                            iconImage.style.display = 'block';
+                            headerImage.value = iconUrl;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching game icon:', error));
+        }
+    });
+</script>
+</body>
+</html>
