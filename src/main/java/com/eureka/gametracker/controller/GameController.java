@@ -19,7 +19,7 @@ public class GameController {
     @GetMapping
     public String listGames(Model model) {
         model.addAttribute("games", gameService.getAllGames());
-        return "game/list";
+        return "game/index";
     }
 
     @GetMapping("/add")
